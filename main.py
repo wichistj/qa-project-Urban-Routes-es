@@ -3,7 +3,6 @@ from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-import time
 from selenium import webdriver
 from data import card_number, card_code
 from selenium.webdriver.common.by import By
@@ -50,7 +49,7 @@ class UrbanRoutesPage:
     request_taxi_button = (By.CSS_SELECTOR, '.button.round')
     comfort_icon = (By.XPATH, '//*[@id="root"]/div/div[3]/div[3]/div[2]/div[1]/div[5]/div[1]')
     phone_field = (By.XPATH, '/html/body/div/div/div[1]/div[2]/div[1]/form/div[1]/div[1]/input')
-    phone_case = (By.XPATH, '//*[@id="root"]/div/div[3]/div[3]/div[2]/div[2]/div[1]/div')
+    phone_case = (By.XPATH, "//div[@class='np-text' and text()='Número de teléfono']")
     button_full = (By.XPATH, '//*[@id="root"]/div/div[1]/div[2]/div[1]/form/div[2]/button')
     close_button_section_close = (By.CLASS_NAME, 'close-button section-close')
     button_confirmation = (By.XPATH, '//*[@id="root"]/div/div[1]/div[2]/div[2]/form/div[2]/button[1]')
@@ -149,10 +148,11 @@ class UrbanRoutesPage:
             expected_conditions.visibility_of_element_located(self.phone_input)
         )
 
-    def write_driver_message(self, message_for_driver):
-        WebDriverWait(self.driver, 5).until(
-            expected_conditions.visibility_of_element_located(self.driver_message_input)
-        ).send_keys(data.message_for_driver)
+    def set_write_driver_message(self, message_for_driver):
+        self.get_write_driver_message().send_keys(message_for_driver)
+
+    def get_write_driver_message(self):
+        return self.driver.find_element(*self.driver_message_input)
 
     def add_blanket_and_tissues(self):
         WebDriverWait(self.driver, 5).until(
@@ -251,6 +251,7 @@ class TestUrbanRoutes:
         routes_page = UrbanRoutesPage(self.driver)
         routes_page.set_request_taxi_button()
         routes_page.set_comfort_icon()
+        assert routes_page.get_comfort_icon().is_displayed(), "El icono Comfort no fue seleccionado."
 
     def test_fill_phone_number(self):
         self.test_request_taxi()
@@ -268,23 +269,26 @@ class TestUrbanRoutes:
         routes_page.set_payment_method_button()
         routes_page.set_add_card_button()
         routes_page.fill_credit_card(card_number, card_code)
-        time.sleep(2)
         routes_page.set_close_modal()
+        assert routes_page.get_payment_method_button().is_displayed(), "Método de pago no fue agregado correctamente."
 
     def test_write_driver_message(self):
         self.test_add_payment_method()
         routes_page = UrbanRoutesPage(self.driver)
-        routes_page.write_driver_message(data.message_for_driver)
+        routes_page.set_write_driver_message(data.message_for_driver)
+        assert routes_page.get_write_driver_message().get_attribute("value") == data.message_for_driver
 
     def test_add_blanket_and_tissues(self):
         self.test_write_driver_message()
         routes_page = UrbanRoutesPage(self.driver)
         routes_page.add_blanket_and_tissues()
+        assert routes_page.blanket_and_tissues_button is not None, "No se agregó manta y pañuelos correctamente."
 
     def test_add_ice_cream(self):
         self.test_add_payment_method()
         routes_page = UrbanRoutesPage(self.driver)
         routes_page.add_ice_cream()
+        assert routes_page.ice_cream_button is not None, "El helado no fue agregado correctamente."
 
     @classmethod
     def teardown_class(cls):
